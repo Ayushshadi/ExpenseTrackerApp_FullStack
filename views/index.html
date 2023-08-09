@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+
+
+    <h1 class="heading">Track Your Expenses</h1>
+    <form  id='my-form'  class="my-form">
+        <div>
+        <div class="inputs">
+            <label for="name">Name:</label><br>
+            <select name="" id="category" class="category">
+                <option value="Movie">Movie</option>
+                <option value="Rent">Rent</option>
+                <option value="Fuel">Fuel</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Hotel">Hotel</option>
+            </select>
+        </div>
+        <div class="inputs">
+            <label for="">Expense Amount:</label><br>
+            <input type="text" id="expenseamt">
+        </div>
+        <div class="inputs">
+            <label for="">Description:</label><br>
+            <input type="text" id="description">
+        </div>
+        <input type="hidden" id="userid" name="userid">
+        <div class="buttons">
+            <button type="submit" class="btn" id="submit">Submit</button>
+            <button type="button" class="btn" id="update">Update</button>
+        </div>
+        
+    </form>
+    <div>
+        <ul id="expenseList"></ul>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <script>
+      
+
+var myform = document.getElementById('my-form');
+var category = document.getElementById('category');
+var price = document.getElementById('expenseamt');
+var desc = document.getElementById('description');
+var userid = document.getElementById('userid');
+var btnsubmit = document.getElementById('submit');
+var btnupdate = document.getElementById('update');
+var expenselist = document.getElementById('expenseList');
+
+
+//Fetching data from database to the window on loading the page
+window.addEventListener('DOMContentLoaded', async () => {
+    try
+    {
+        const result = await axios.get("http://localhost:4000/getExpense");
+        //console.log(result);
+        for(var i =0;i<result.data.allexpenses.length;i++)
+        {
+            //console.log(result.data.allexpenses[i]);
+            listExpenses(result.data.allexpenses[i]);
+        }
+
+    }catch(error){
+        document.body.innerHTML = document.body.innerHTML+'<h4>Error in fetching data</h4>';
+        console.log(error);
+    }
+
+})
+
+function listExpenses(obj)
+{
+    var str = `Category: ${obj.category} , Price: ${obj.price} , Description: ${obj.description}`;
+    //creating li attribute in ul list
+    let li = document.createElement('li');
+    li.appendChild(document.createTextNode(str));
+
+    //createing delete button
+    let delbtn = document.createElement('button');
+    delbtn.classList.add('tempbtn');
+    delbtn.appendChild(document.createTextNode("Delete item"));
+    li.append(delbtn);
+    
+    //adding eventlistener to delete button created here
+    delbtn.addEventListener('click', (e) =>{
+        e.preventDefault();
+
+        axios.delete(`http://localhost:4000/deleteExpense/${obj.id}`)
+        .then(result => {
+            li.remove();
+        })
+        .catch(error => {
+            document.body.innerHTML = document.body.innerHTML+'<h4>Something went wrong</h4>';
+            console.log(error);
+        });
+    })
+
+    //creating edit button 
+    let editbtn = document.createElement('button');
+    editbtn.classList.add('tempbtn');
+    editbtn.appendChild(document.createTextNode("Edit item"));
+    li.append(editbtn);
+
+    //adding eventListener to edit button created here
+    editbtn.addEventListener('click',(e) => {
+
+        e.preventDefault();
+        axios.get(`http://localhost:4000/editExpense/${obj.id}`)
+        .then(expense => {
+            const data = expense.data.expenseData;
+            category.value = data.category;
+            price.value = data.price;
+            desc.value = data.description;
+            userid.value = data.id;
+            li.remove();
+        })
+        .catch(error => {
+            document.body.innerHTML = document.body.innerHTML+'<h4>Something went wrong</h4>';
+            console.log(error);
+        })
+
+    })
+    expenselist.appendChild(li);
+}
+
+
+//adding event listener to submit button
+myform.addEventListener('submit', async (e) =>  {
+    e.preventDefault();
+    //console.log("Entered in listener");
+    try
+    {
+        const obj = {
+            category : category.value,
+            price : price.value,
+            desc : desc.value
+        }
+        //console.log(obj_serialized);
+        const result = await axios.post('http://localhost:4000/postExpense',obj);
+        listExpenses(result.data.expense);
+        myform.reset();
+    }catch(error){
+        document.body.innerHTML = document.body.innerHTML+'<h4>Error in fetching data</h4>';
+        console.log(error);
+    }
+
+})
+
+//adding event listener to update button
+btnupdate.addEventListener('click', async (e) => {
+        e.preventDefault();
+    try{
+        const obj = {
+        category : category.value,
+        price : price.value,
+        desc : desc.value,
+        id : userid.value
+        }
+
+        const result = await axios.patch(`http://localhost:4000/updateExpense/${userid.value}`,obj);
+        listExpenses(result.data.updatedexpense);
+        myform.reset();
+
+    }catch(error) {
+        document.body.innerHTML = document.body.innerHTML+'<h4>Error in fetching data</h4>';
+        console.log(error);
+    }
+
+
+})
+    </script>
+    
+</body>
+</html>
